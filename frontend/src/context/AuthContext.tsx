@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth as firebaseAuth, db } from '../lib/firebase';
+import { auth as firebaseAuth, db, firebaseInitialized } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { supabase } from '../lib/supabase';
 import { USE_FIREBASE } from '../lib/config';
@@ -23,39 +23,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (USE_FIREBASE) {
-            const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
-                if (firebaseUser) {
-                    try {
-                        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-                        if (userDoc.exists()) {
-                            const userData = userDoc.data() as User;
-                            setUser(userData);
-                            localStorage.setItem('user', JSON.stringify(userData));
-                        } else {
-                            const userData = {
-                                id: firebaseUser.uid,
-                                email: firebaseUser.email || '',
-                                name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-                                role: 'user',
-                                joinedAt: Date.now()
-                            } as User;
-                            setUser(userData);
-                            localStorage.setItem('user', JSON.stringify(userData));
+        if (USE_FIREBASE && firebaseInitialized && firebaseAuth && db) {
+            try {
+                const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+                    if (firebaseUser) {
+                        try {
+                            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+                            if (userDoc.exists()) {
+                                const userData = userDoc.data() as User;
+                                setUser(userData);
+                                localStorage.setItem('user', JSON.stringify(userData));
+                            } else {
+                                const userData = {
+                                    id: firebaseUser.uid,
+                                    email: firebaseUser.email || '',
+                                    name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                                    role: 'user',
+                                    joinedAt: Date.now()
+                                } as User;
+                                setUser(userData);
+                                localStorage.setItem('user', JSON.stringify(userData));
+                            }
+                        } catch (error) {
+                            console.error("AuthContext: Error fetching user doc:", error);
+                            setUser(null);
                         }
-                    } catch (error) {
-                        console.error("AuthContext: Error fetching user doc:", error);
+                    } else {
                         setUser(null);
+                        localStorage.removeItem('user');
+                        localStorage.removeItem('token');
                     }
-                } else {
-                    setUser(null);
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('token');
-                }
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            } catch (firebaseError) {
+                console.warn("AuthContext: Firebase auth initialization failed:", firebaseError);
                 setLoading(false);
-            });
-            return () => unsubscribe();
-        } else {
+            }
+        } else if (!USE_FIREBASE) {
             // Supabase Auth
             const client = supabase;
             if (!client) {
@@ -94,6 +99,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setLoading(false);
             });
             return () => subscription.unsubscribe();
+        } else {
+            // Firebase disabled or not available, check for local auth
+            const savedToken = localStorage.getItem('token');
+            const savedUser = localStorage.getItem('user');
+            if (savedToken && savedUser) {
+                setUser(JSON.parse(savedUser));
+            }
+            setLoading(false);
         }
     }, []);
 

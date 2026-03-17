@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import api from '../src/lib/api';
 import {
     Store, ShoppingCart, Zap, Shield, Rocket, Globe, ArrowRight, LayoutDashboard,
     Database, CreditCard, ShoppingBag, BarChart3, Users, Smartphone, Check, Play,
@@ -224,6 +225,13 @@ const Landing: React.FC = () => {
     const [scrolled, setScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [activeTestimonial, setActiveTestimonial] = useState(0);
+    const [platformStats, setPlatformStats] = useState<{
+        activeSellers: number;
+        totalProducts: number;
+        countries: string;
+        uptime: string;
+    } | null>(null);
+    const [statsLoading, setStatsLoading] = useState(true);
     const heroRef = useRef(null);
     const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
     const heroY = useTransform(scrollYProgress, [0, 1], [0, 200]);
@@ -233,6 +241,22 @@ const Landing: React.FC = () => {
         const handleScroll = () => setScrolled(window.scrollY > 50);
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Fetch platform stats
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const response = await api.get('/platform/stats');
+                setPlatformStats(response.data);
+            } catch (error) {
+                console.error('Failed to fetch platform stats:', error);
+                // Use fallback values if API fails
+            } finally {
+                setStatsLoading(false);
+            }
+        };
+        fetchStats();
     }, []);
 
     // Auto-rotate testimonials
@@ -255,18 +279,18 @@ const Landing: React.FC = () => {
     const pricingPlans = [
         {
             plan: 'Free',
-            price: 'Free',
-            features: ['Up to 10 products', 'Basic analytics', 'Standard support', '1 store', '500MB storage', 'Basic SEO tools']
+            price: '$0',
+            features: ['200 products', '3 stores', '500MB storage', 'Basic SEO tools', 'Basic analytics', '5% commission on sales']
         },
         {
             plan: 'Pro',
-            price: '$29',
-            features: ['Unlimited products', 'Advanced analytics', 'Priority support', '5 stores', '50GB storage', 'AI Store Manager', 'Stripe Connect', 'Automated SEO']
+            price: '$15',
+            features: ['Unlimited products', 'Unlimited stores', '10GB storage', 'Advanced SEO tools', 'Advanced analytics', 'AI-powered features', '2% commission on sales']
         },
         {
             plan: 'Enterprise',
             price: '$99',
-            features: ['Everything in Pro', 'Dedicated account manager', 'Custom integrations', 'Unlimited stores', 'Unlimited storage', 'White-label solution', 'SLA guarantee', 'API access']
+            features: ['Everything in PRO', 'Unlimited storage', 'Priority support', 'Custom integrations', '0% commission']
         }
     ];
 
@@ -290,7 +314,18 @@ const Landing: React.FC = () => {
         { icon: Target, title: 'Dynamic Pricing', description: 'Real-time price optimization based on competitors, demand, and customer behavior.' },
     ];
 
-    const stats = [
+    // Platform stats - use real data if available, otherwise show loading or fallback
+    const stats = statsLoading ? [
+        { value: 0, suffix: '', label: 'Active Sellers' },
+        { value: 0, suffix: '', label: 'Products Listed' },
+        { value: 0, suffix: '', label: 'Countries' },
+        { value: 0, suffix: '%', label: 'Uptime' },
+    ] : platformStats ? [
+        { value: platformStats.activeSellers, suffix: '+', label: 'Active Sellers' },
+        { value: platformStats.totalProducts, suffix: '+', label: 'Products Listed' },
+        { value: parseInt(platformStats.countries.replace('+', '')) || 150, suffix: platformStats.countries.includes('+') ? '+' : '', label: 'Countries' },
+        { value: parseFloat(platformStats.uptime.replace('%', '')) || 99.9, suffix: '%', label: 'Uptime' },
+    ] : [
         { value: 50000, suffix: '+', label: 'Active Sellers' },
         { value: 2000000, suffix: '+', label: 'Products Listed' },
         { value: 150, suffix: '+', label: 'Countries' },
@@ -645,11 +680,49 @@ const Landing: React.FC = () => {
                         viewport={{ once: true }}
                         className="mt-20 text-center"
                     >
-                        <p className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-8">Trusted by leading brands</p>
-                        <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16 opacity-50">
-                            {partners.map((partner, i) => (
-                                <div key={i} className="text-2xl font-black text-slate-400 dark:text-slate-600 font-heading">{partner}</div>
-                            ))}
+                        <p className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-8">Trusted by Leading Platforms</p>
+                        <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+                            {/* Stripe */}
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-800 shadow-md">
+                                <svg viewBox="0 0 60 25" className="h-8 w-auto" fill="#635BFF">
+                                    <path d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.02 1.04-.06 1.48zm-6.08-3.48c0-1.87.98-2.83 2.28-2.83 1.2 0 2.18.84 2.38 2.83h-4.66zM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V5.57h3.76l.08 1.02a4.7 4.7 0 0 1 3.23-1.29c2.9 0 5.62 2.6 5.62 7.4 0 5.23-2.7 7.6-5.65 7.6zM40 8.95c-.95 0-1.54.34-1.97.81l.02 6.12c.4.44.98.78 1.95.78 1.52 0 2.54-1.65 2.54-3.87 0-2.15-1.04-3.84-2.54-3.84zM28.24 5.57h4.13v14.44h-4.13V5.57zm0-5.13L32.37 0v3.42l-4.13.88V.44zM20.28 20.3c-2.25 0-3.9-.68-4.71-1.54l-.04 1.35h-4.13V.44l4.16-.88v3.67a5.08 5.08 0 0 1 3.22-1.2v4.14c.2-.08.42-.12.66-.12 1.07 0 1.8.52 2.1 1.47 1.2-.96 2.36-1.47 4.04-1.47 3.4 0 5.85 2.66 5.85 7.38 0 5.29-2.7 7.55-6.15 7.55zm-.54-10.84c-1.27 0-2.13.68-2.63 1.48 0 1.42.74 2.37 2.4 2.37 1.7 0 2.44-.92 2.44-2.23 0-1.3-.74-2.62-2.21-2.62zM9.46 20.08l-.12-.97c-.4.56-.96 1.01-1.96 1.01-1.87 0-3.53-1.6-3.53-7.23 0-5.5 1.58-7.23 3.95-7.23 1.04 0 1.7.45 2.18 1.05l.1-.82h4.12v14.2h-4.14v-1.01zm-2.08-4.89c1.1 0 1.94-.8 1.94-2.3 0-1.64-.94-2.33-2.17-2.33-1.14 0-1.95.84-1.95 2.33 0 1.47.74 2.3 2.18 2.3z" />
+                                </svg>
+                            </div>
+                            {/* Vercel */}
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-800 shadow-md">
+                                <svg viewBox="0 0 76 65" className="h-8 w-auto" fill="#000000">
+                                    <path d="M37.5 0L75 65H0L37.5 0z" />
+                                </svg>
+                            </div>
+                            {/* AWS */}
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-800 shadow-md">
+                                <svg viewBox="0 0 87.5 50" className="h-8 w-auto" fill="#FF9900">
+                                    <path d="M0 47.5L5 42.5L15 47.5L0 47.5zM82.5 40L75 47.5L87.5 47.5L82.5 40zM75 5L82.5 0L75 0L70 5L75 5zM40 17.5L45 15L50 17.5L45 20L40 17.5zM30 25L37.5 10L45 25L37.5 27.5L30 25zM55 25L60 20L65 25L60 27.5L55 25zM15 40L20 35L25 40L20 42.5L15 40zM17.5 30L25 17.5L30 25L25 27.5L17.5 30zM57.5 30L65 25L67.5 27.5L60 35L57.5 30zM45 35L55 25L57.5 30L50 40L45 35zM20 42.5L25 40L27.5 42.5L22.5 45L20 42.5zM70 42.5L67.5 45L62.5 42.5L65 40L70 42.5z" />
+                                </svg>
+                            </div>
+                            {/* Google Cloud */}
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-800 shadow-md">
+                                <svg viewBox="0 0 100 100" className="h-8 w-auto" fill="#4285F4">
+                                    <path d="M50 0C30.4 0 15.3 12.2 8.4 29.4l12.9 7.5c4.3-10.7 14.3-18.4 26.1-18.4 15.3 0 27.7 12.4 27.7 27.7s-12.4 27.7-27.7 27.7c-9.8 0-18.4-5.1-23.3-12.8l-13.3 7.7c7.7 11.9 21.2 20 38.2 20 23.9 0 43.4-19.5 43.4-43.4S73.9 0 50 0z" />
+                                    <path d="M27.5 40.4l-12.9-7.5C7.8 44.1 0 56.3 0 70.7c0 14.4 6.6 27.5 17.1 36.1l13.3-7.7C25.4 91.3 18.3 82 18.3 70.7c0-6.7 2.6-12.9 7-17.8l2.2 4.5c-2.7 3.2-4.3 7.4-4.3 11.9 0 6.6 3.1 12.5 7.9 16.3l-3.4 3.4c-6.7-6.7-10.8-16.1-10.8-26.8 0-11.5 6.2-21.7 15.6-27.2l-5-5.4z" />
+                                    <path d="M58.1 67.5l12.6-7.3c1.1 3.2 1.7 6.6 1.7 10.2 0 3.6-.6 7-1.7 10.2l-12.6-7.3c.6-1.8.9-3.7.9-5.7s-.3-3.9-.9-5.7v-4.4z" />
+                                    <path d="M91.6 60.1l-12.9 7.5c2.2 4.3 3.4 9 3.4 13.9 0 4.9-1.2 9.6-3.4 13.9l12.9 7.5c4.9-8 7.7-17.3 7.7-27.3s-2.8-19.3-7.7-27.5z" />
+                                    <path d="M82.2 87.4l-12.6-7.3c-.6 1.8-.9 3.7-.9 5.7s.3 3.9.9 5.7l12.6 7.3c-.6-1.8-.9-3.7-.9-5.7s.3-3.9.9-5.7z" />
+                                </svg>
+                            </div>
+                            {/* Supabase */}
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-800 shadow-md">
+                                <svg viewBox="0 0 127 114" className="h-8 w-auto" fill="#3ECF8E">
+                                    <path d="M2.5 68.2L62.9 4.7c2.9-2.9 7.7-2.9 10.6 0l6.7 6.7c2.9 2.9 2.9 7.7 0 10.6L26.1 84.5h71.2c4.1 0 7.5 3.4 7.5 7.5v.1c0 4.1-3.4 7.5-7.5 7.5H24.9l49.6 49.6c2.9 2.9 2.9 7.7 0 10.6l-6.7 6.7c-2.9 2.9-7.7 2.9-10.6 0L2.5 78.3c-2.9-2.9-2.9-7.7 0-10.6l-.3-.3.3-.2z" />
+                                </svg>
+                            </div>
+                            {/* Firebase */}
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-slate-800 shadow-md">
+                                <svg viewBox="0 0 24 24" className="h-8 w-auto" fill="#FFCA28">
+                                    <path d="M3.89 15.672L6.255.461A.542.542 0 0 1 7 .27l2.245 14.771L22.842 9.94a.542.542 0 0 1 .923.47l-7.036 9.705a.542.542 0 0 1-.461.277l-2.882.378a.542.542 0 0 1-.485-.39L3.891 15.9c-.117-.377.135-.75.485-.392l-.486.164z" />
+                                    <path d="M23.763 9.94L9.5 19.241V29.5c0 1.93 1.57 3.5 3.5 3.5h2.5c1.93 0 3.5-1.57 3.5-3.5v-7.5l7.763-6.06z" />
+                                </svg>
+                            </div>
                         </div>
                     </motion.div>
                 </div>

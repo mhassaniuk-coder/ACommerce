@@ -5,10 +5,10 @@ import { ThemeToggle } from '../context/ThemeContext';
 import { useAuth } from '../src/context/AuthContext';
 import api from '../src/lib/api';
 import { useNavigate } from 'react-router-dom';
-import { auth, db, googleProvider } from '../src/lib/firebase';
-import { 
-    signInWithEmailAndPassword as firebaseSignIn, 
-    createUserWithEmailAndPassword as firebaseCreateUser, 
+import { auth, db, googleProvider, firebaseInitialized } from '../src/lib/firebase';
+import {
+    signInWithEmailAndPassword as firebaseSignIn,
+    createUserWithEmailAndPassword as firebaseCreateUser,
     sendPasswordResetEmail as firebaseSendPasswordResetEmail,
     signInWithPopup as firebaseSignInWithPopup
 } from 'firebase/auth';
@@ -87,7 +87,7 @@ export const Auth: React.FC = () => {
         try {
             // Try Firebase password reset first, fall back to backend
             try {
-                if (USE_FIREBASE) {
+                if (USE_FIREBASE && firebaseInitialized && auth) {
                     await firebaseSendPasswordResetEmail(auth, email);
                 } else if (supabase) {
                     const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -99,7 +99,7 @@ export const Auth: React.FC = () => {
                 }
             } catch (firebaseErr: any) {
                 // If Firebase auth isn't configured, show helpful message
-                if (firebaseErr?.code === 'auth/configuration-not-found') {
+                if (firebaseErr?.code === 'auth/configuration-not-found' || firebaseErr?.code === 'auth/invalid-api-key') {
                     showToast('Password reset is temporarily unavailable. Please contact support.', 'info');
                     setRecoveryEmailSent(true);
                     return;
@@ -118,18 +118,18 @@ export const Auth: React.FC = () => {
     const handleGoogleLogin = async () => {
         try {
             setLoading(true);
-            
-            if (USE_FIREBASE) {
+
+            if (USE_FIREBASE && firebaseInitialized && auth && googleProvider) {
                 try {
                     const result = await firebaseSignInWithPopup(auth, googleProvider);
-                    
+
                     // Sync with Backend PostgreSQL
                     const response = await api.post('/auth/google', {
                         email: result.user.email,
                         name: result.user.displayName || result.user.email?.split('@')[0],
                         avatar: result.user.photoURL
                     });
-                    
+
                     if (response.data.token) {
                         login(response.data.token, response.data.user);
                     }
@@ -138,7 +138,7 @@ export const Auth: React.FC = () => {
                     navigate(getPostLoginRoute(response.data.user as User));
                 } catch (firebaseErr: any) {
                     // Firebase Auth not configured — fall back to backend-only Google OAuth
-                    if (firebaseErr?.code === 'auth/configuration-not-found') {
+                    if (firebaseErr?.code === 'auth/configuration-not-found' || firebaseErr?.code === 'auth/invalid-api-key') {
                         showToast('Google sign-in is being configured. Please use email sign-in for now.', 'info');
                         return;
                     }
@@ -157,7 +157,7 @@ export const Auth: React.FC = () => {
             }
         } catch (error: any) {
             console.error('Google Auth Error:', error);
-            const message = error.code === 'auth/popup-blocked' 
+            const message = error.code === 'auth/popup-blocked'
                 ? 'Sign-in popup was blocked. Please allow popups for this site.'
                 : error.code === 'auth/configuration-not-found'
                     ? 'Google sign-in is being configured. Please use email sign-in.'
@@ -177,7 +177,7 @@ export const Auth: React.FC = () => {
             if (password !== confirmPassword) return showToast("Passwords do not match", "error");
             if (password.length < 6) return showToast("Password must be at least 6 characters", "error");
         }
-        
+
         setLoading(true);
         try {
             if (mode === 'signup') {
@@ -355,7 +355,7 @@ export const Auth: React.FC = () => {
                                 ) : step === 1 ? (
                                     <form onSubmit={handleEmailSubmit} className="space-y-6">
                                         <InputField icon={Mail} type="email" label="Identity Email" value={email} onChange={(e: any) => setEmail(e.target.value)} autoFocus />
-                                        
+
                                         <button type="submit" disabled={loading} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-indigo-600/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
                                             Proceed to Authentication <ArrowRight size={16} />
                                         </button>
