@@ -13,7 +13,6 @@ import { StoreCard } from '../components/StoreCard';
 import { ThemeToggle } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { canAccessAdminDashboard } from '../src/lib/adminAccess';
-import { StoreCreationWizard } from '../components/StoreCreationWizard';
 import { StoreSwitcher } from '../components/StoreSwitcher';
 
 interface DashboardProps {
@@ -28,6 +27,10 @@ interface AggregatedProduct extends Product {
     storeTheme: string;
     salesCount: number;
 }
+
+const StoreCreationWizard = React.lazy(() =>
+    import('../components/StoreCreationWizard').then((module) => ({ default: module.StoreCreationWizard }))
+);
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate }) => {
     const [viewMode, setViewMode] = useState<'shop' | 'sell'>(() => {
@@ -309,10 +312,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
                 )}
             </main>
 
-            <StoreCreationWizard 
-                isOpen={isWizardOpen} 
-                onClose={() => setIsWizardOpen(false)} 
-            />
+            {isWizardOpen && (
+                <React.Suspense
+                    fallback={
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                            <Loader2 className="text-white animate-spin" size={32} />
+                        </div>
+                    }
+                >
+                    <StoreCreationWizard
+                        isOpen={isWizardOpen}
+                        onClose={() => setIsWizardOpen(false)}
+                    />
+                </React.Suspense>
+            )}
         </div>
     );
 };

@@ -16,13 +16,16 @@ import {
     Store as StoreIcon
 } from 'lucide-react';
 import { StoreSwitcher } from '../components/StoreSwitcher';
-import { StoreCreationWizard } from '../components/StoreCreationWizard';
 import { PlanTier } from '../types';
 
 interface StoreAdminProps {
     storeId: string;
     onNavigate: (path: string) => void;
 }
+
+const StoreCreationWizard = React.lazy(() =>
+    import('../components/StoreCreationWizard').then((module) => ({ default: module.StoreCreationWizard }))
+);
 
 // --- Chart Component ---
 const SalesChart: React.FC<{ data: number[] }> = ({ data }) => {
@@ -2211,10 +2214,20 @@ export const StoreAdmin: React.FC<StoreAdminProps> = ({ storeId, onNavigate }) =
                     )}
 
                     {/* Premium Store Creation Wizard */}
-                    <StoreCreationWizard 
-                        isOpen={isWizardOpen} 
-                        onClose={() => setIsWizardOpen(false)} 
-                    />
+                    {isWizardOpen && (
+                        <React.Suspense
+                            fallback={
+                                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                                    <Loader2 className="text-white animate-spin" size={32} />
+                                </div>
+                            }
+                        >
+                            <StoreCreationWizard
+                                isOpen={isWizardOpen}
+                                onClose={() => setIsWizardOpen(false)}
+                            />
+                        </React.Suspense>
+                    )}
                 </div>
             </main>
         </div>

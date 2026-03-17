@@ -1,29 +1,28 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { User } from './types';
-import { Dashboard } from './pages/Dashboard';
-import { StoreAdmin } from './pages/StoreAdmin';
-import { StoreFront } from './pages/StoreFront';
-import { PlatformAdmin } from './pages/PlatformAdmin';
-import { UserProfile } from './pages/UserProfile';
-import Marketplace from './pages/Marketplace';
-import { Auth } from './pages/Auth';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { CartProvider } from './context/CartContext';
 import { CurrencyProvider } from './context/CurrencyContext';
-import { Verification } from './pages/Verification';
-import { AuthCallback } from './pages/AuthCallback';
 import { canAccessAdminDashboard, getPostLoginRoute } from './src/lib/adminAccess';
 import './src/lib/firebase';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
-// New pages
-import Legal from './pages/Legal';
-import DisputeCenter from './pages/DisputeCenter';
-import FeedbackPage from './pages/FeedbackPage';
-
-// --- Landing ---
-import Landing from './pages/Landing';
+const Dashboard = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })));
+const StoreAdmin = lazy(() => import('./pages/StoreAdmin').then((module) => ({ default: module.StoreAdmin })));
+const StoreFront = lazy(() => import('./pages/StoreFront').then((module) => ({ default: module.StoreFront })));
+const PlatformAdmin = lazy(() => import('./pages/PlatformAdmin').then((module) => ({ default: module.PlatformAdmin })));
+const UserProfile = lazy(() => import('./pages/UserProfile').then((module) => ({ default: module.UserProfile })));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const Auth = lazy(() => import('./pages/Auth').then((module) => ({ default: module.Auth })));
+const Verification = lazy(() => import('./pages/Verification').then((module) => ({ default: module.Verification })));
+const AuthCallback = lazy(() => import('./pages/AuthCallback').then((module) => ({ default: module.AuthCallback })));
+const Legal = lazy(() => import('./pages/Legal'));
+const DisputeCenter = lazy(() => import('./pages/DisputeCenter'));
+const FeedbackPage = lazy(() => import('./pages/FeedbackPage'));
+const Landing = lazy(() => import('./pages/Landing'));
 
 export const isFullyVerified = (user: User | null) => {
   return user && user.isVerified !== false && user.kycStatus === 'APPROVED' && user.paymentVerified === true;
@@ -79,11 +78,13 @@ const VerificationWrapper: React.FC<{ user: User | null }> = ({ user }) => {
   return <Verification />;
 };
 
-// --- Main App ---
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
-
 const queryClient = new QueryClient();
+
+const RouteLoader: React.FC = () => (
+  <div className="min-h-screen bg-[#07070d] text-white flex items-center justify-center">
+    <p className="text-sm font-bold tracking-wider uppercase text-white/70">Loading page...</p>
+  </div>
+);
 
 const AppRoutes = () => {
   const { user, logout, loading } = useAuth();
@@ -97,33 +98,35 @@ const AppRoutes = () => {
   }
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={user ? <Navigate to={!isFullyVerified(user) ? "/verify" : getPostLoginRoute(user)} replace /> : <Auth />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      {/* Protected Routes */}
-      <Route path="/verify" element={<VerificationWrapper user={user} />} />
-      <Route path="/dashboard" element={<DashboardWrapper user={user} onLogout={logout} />} />
-      <Route path="/admin" element={<PlatformAdminWrapper user={user} onLogout={logout} />} />
-      <Route path="/profile" element={<UserProfileWrapper user={user} />} />
-      <Route path="/store/:storeId/admin/*" element={<StoreAdminWrapper user={user} />} />
+    <Suspense fallback={<RouteLoader />}>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={user ? <Navigate to={!isFullyVerified(user) ? "/verify" : getPostLoginRoute(user)} replace /> : <Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        {/* Protected Routes */}
+        <Route path="/verify" element={<VerificationWrapper user={user} />} />
+        <Route path="/dashboard" element={<DashboardWrapper user={user} onLogout={logout} />} />
+        <Route path="/admin" element={<PlatformAdminWrapper user={user} onLogout={logout} />} />
+        <Route path="/profile" element={<UserProfileWrapper user={user} />} />
+        <Route path="/store/:storeId/admin/*" element={<StoreAdminWrapper user={user} />} />
 
-      {/* Public Shop Routes */}
-      <Route path="/shop" element={<MarketplaceWrapper />} />
-      <Route path="/store/:storeId/*" element={<StoreFrontWrapper />} />
+        {/* Public Shop Routes */}
+        <Route path="/shop" element={<MarketplaceWrapper />} />
+        <Route path="/store/:storeId/*" element={<StoreFrontWrapper />} />
 
-      {/* Legal & Support Routes */}
-      <Route path="/legal" element={<Legal />} />
-      <Route path="/dispute-center" element={<DisputeCenter />} />
-      <Route path="/dispute-center/:mode" element={<DisputeCenter />} />
+        {/* Legal & Support Routes */}
+        <Route path="/legal" element={<Legal />} />
+        <Route path="/dispute-center" element={<DisputeCenter />} />
+        <Route path="/dispute-center/:mode" element={<DisputeCenter />} />
 
-      {/* Feedback Routes */}
-      <Route path="/feedback/:type/:id" element={<FeedbackPage />} />
+        {/* Feedback Routes */}
+        <Route path="/feedback/:type/:id" element={<FeedbackPage />} />
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 };
 

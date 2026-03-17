@@ -16,12 +16,16 @@ model User {
   role      String   @default("USER") // USER, ADMIN
   avatar    String?
   isVerified Boolean  @default(false)
+  emailVerified Boolean @default(false)
+  verificationToken String?
+  verificationTokenExpires DateTime?
   kycStatus  String   @default("PENDING") // PENDING, APPROVED, REJECTED
   idDocumentUrl String?
   paymentVerified Boolean @default(false)
   stripeCustomerId String?
   paypalPayerId String?
   phone     String?
+  phoneVerified Boolean @default(false)
   companyName String?
   plan      String   @default("FREE")  // FREE, PRO, PREMIUM, ENTERPRISE
   createdAt DateTime @default(now())

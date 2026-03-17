@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth as firebaseAuth, db, firebaseInitialized } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { app as firebaseApp, auth as firebaseAuth, firebaseInitialized } from '../lib/firebase';
 import { supabase } from '../lib/supabase';
 import { USE_FIREBASE } from '../lib/config';
 import { User } from '../../types';
@@ -23,12 +22,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (USE_FIREBASE && firebaseInitialized && firebaseAuth && db) {
+        if (USE_FIREBASE && firebaseInitialized && firebaseAuth && firebaseApp) {
             try {
                 const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
                     if (firebaseUser) {
                         try {
-                            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+                            const { doc, getDoc, getFirestore } = await import('firebase/firestore');
+                            const firestore = getFirestore(firebaseApp);
+                            const userDoc = await getDoc(doc(firestore, 'users', firebaseUser.uid));
                             if (userDoc.exists()) {
                                 const userData = userDoc.data() as User;
                                 setUser(userData);
@@ -46,7 +47,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             }
                         } catch (error) {
                             console.error("AuthContext: Error fetching user doc:", error);
-                            setUser(null);
+                            const fallbackUser = {
+                                id: firebaseUser.uid,
+                                email: firebaseUser.email || '',
+                                name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+                                role: 'user',
+                                joinedAt: Date.now()
+                            } as User;
+                            setUser(fallbackUser);
+                            localStorage.setItem('user', JSON.stringify(fallbackUser));
                         }
                     } else {
                         setUser(null);

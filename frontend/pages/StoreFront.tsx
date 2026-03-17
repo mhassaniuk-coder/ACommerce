@@ -13,12 +13,6 @@ import {
     ChevronDown, ChevronRight, User as UserIcon, LogOut, Package, Truck, AlertCircle, Share2, Check,
     ArrowLeft, Image as ImageIcon, Maximize2, XCircle, SlidersHorizontal, ChevronUp, ChevronLeft, Zap, ShoppingBag
 } from 'lucide-react';
-import { AiChatWidget } from '../components/AiChatWidget';
-import CheckoutWizard from '../components/CheckoutWizard';
-import CartReview from '../components/CartReview';
-import ShippingForm from '../components/ShippingForm';
-import PaymentSelector from '../components/PaymentSelector';
-import OrderSummary from '../components/OrderSummary';
 import { useCart } from '../context/CartContext';
 import { CheckoutStep } from '../types';
 
@@ -26,6 +20,21 @@ interface StoreFrontProps {
     storeId: string;
     onNavigate: (path: string) => void;
 }
+
+const AiChatWidget = React.lazy(() =>
+    import('../components/AiChatWidget').then((module) => ({ default: module.AiChatWidget }))
+);
+const CheckoutWizard = React.lazy(() => import('../components/CheckoutWizard'));
+const CartReview = React.lazy(() => import('../components/CartReview'));
+const ShippingForm = React.lazy(() => import('../components/ShippingForm'));
+const PaymentSelector = React.lazy(() => import('../components/PaymentSelector'));
+const OrderSummary = React.lazy(() => import('../components/OrderSummary'));
+
+const CheckoutLoader: React.FC = () => (
+    <div className="flex justify-center py-12">
+        <Loader2 className="animate-spin text-gray-400" size={28} />
+    </div>
+);
 
 const getRadiusClass = (settings: Store['settings'], base: string) => {
     switch (settings.borderRadius) {
@@ -1083,25 +1092,29 @@ const CheckoutPage: React.FC<{ store: Store }> = ({ store }) => {
                 {checkoutState.currentStep === 'cart' ? 'Continue Shopping' : 'Back'}
             </button>
 
-            <CheckoutWizard />
+            <React.Suspense fallback={<CheckoutLoader />}>
+                <CheckoutWizard />
+            </React.Suspense>
 
             <div className="mt-8">
-                {checkoutState.currentStep === 'cart' && (
-                    <CartReview onContinue={handleContinue} />
-                )}
-                {checkoutState.currentStep === 'shipping' && (
-                    <ShippingForm onContinue={handleContinue} onBack={handleBack} />
-                )}
-                {checkoutState.currentStep === 'payment' && (
-                    <PaymentSelector onContinue={handleContinue} onBack={handleBack} />
-                )}
-                {checkoutState.currentStep === 'review' && (
-                    <OrderSummary
-                        onBack={handleBack}
-                        onComplete={handleComplete}
-                        onEditSection={handleEditSection}
-                    />
-                )}
+                <React.Suspense fallback={<CheckoutLoader />}>
+                    {checkoutState.currentStep === 'cart' && (
+                        <CartReview onContinue={handleContinue} />
+                    )}
+                    {checkoutState.currentStep === 'shipping' && (
+                        <ShippingForm onContinue={handleContinue} onBack={handleBack} />
+                    )}
+                    {checkoutState.currentStep === 'payment' && (
+                        <PaymentSelector onContinue={handleContinue} onBack={handleBack} />
+                    )}
+                    {checkoutState.currentStep === 'review' && (
+                        <OrderSummary
+                            onBack={handleBack}
+                            onComplete={handleComplete}
+                            onEditSection={handleEditSection}
+                        />
+                    )}
+                </React.Suspense>
             </div>
         </div>
     );
@@ -1479,7 +1492,9 @@ export const StoreFront: React.FC<StoreFrontProps> = ({ storeId, onNavigate }) =
                     </div>
                 </div>
             </footer>
-            <AiChatWidget store={store} />
+            <React.Suspense fallback={null}>
+                <AiChatWidget store={store} />
+            </React.Suspense>
         </div>
     );
 };

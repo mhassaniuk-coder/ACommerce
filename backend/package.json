@@ -15,10 +15,12 @@
     "dependencies": {
         "@electric-sql/pglite": "^0.3.16",
         "@electric-sql/pglite-socket": "^0.0.22",
+        "@google-cloud/recaptcha-enterprise": "^6.4.0",
         "@google/genai": "^1.40.0",
         "@prisma/client": "^5.10.2",
         "@supabase/supabase-js": "^2.97.0",
         "@types/stripe": "^8.0.416",
+        "axios": "^1.13.6",
         "bcryptjs": "^2.4.3",
         "cors": "^2.8.5",
         "dotenv": "^16.4.5",
