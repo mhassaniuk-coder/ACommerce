@@ -2,13 +2,16 @@ import axios from 'axios';
 import { auth, firebaseInitialized } from './firebase';
 import { USE_FIREBASE } from './config';
 
-// Use relative path when running in development (via Vite proxy)
-// Fall back to explicit localhost:5000 for production builds
+// Prefer explicit env override; otherwise use same-origin /api
+// to avoid hardcoding localhost in production builds.
 const getBaseURL = () => {
-    if (import.meta.env.DEV && !import.meta.env.VITE_API_URL) {
-        return '/api'; // Uses Vite proxy
+    if (import.meta.env.VITE_API_URL) {
+        return import.meta.env.VITE_API_URL;
     }
-    return import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    if (typeof window !== 'undefined' && window.location?.origin) {
+        return `${window.location.origin}/api`;
+    }
+    return '/api';
 };
 
 const api = axios.create({
