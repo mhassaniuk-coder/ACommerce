@@ -73,6 +73,14 @@ app.use('/api/stores/:storeId/customers', customerRoutes);
 app.use('/api/stores/:storeId/discounts', marketingRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/stores/:storeId/billing', billingRoutes);
+
+// Global billing catalog endpoint (doesn't require store ID)
+app.get('/api/billing/catalog', (req, res, next) => {
+    // Import and call the getPlanCatalog handler directly
+    import('./controllers/billingController').then(module => {
+        module.getPlanCatalog(req, res).catch(next);
+    });
+});
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', rateLimit({ keyPrefix: 'ai', max: 60, windowMs: 60 * 1000 }), aiRoutes);
 app.use('/api/autopilot', autoPilotRoutes);

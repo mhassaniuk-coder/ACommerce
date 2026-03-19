@@ -1,6 +1,8 @@
 // Firebase SDK imports
 import { initializeApp, FirebaseApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 // Firebase configuration from environment variables (with fallback to hardcoded values)
 const firebaseConfig = {
@@ -42,3 +44,23 @@ try {
 // Export Firebase services needed on initial app load.
 export { app, auth, googleProvider };
 export { firebaseInitialized };
+
+// Initialize Firestore and Storage (lazy initialization)
+let db: ReturnType<typeof getFirestore> | null = null;
+let storage: ReturnType<typeof getStorage> | null = null;
+
+if (app && firebaseInitialized) {
+ try {
+  db = getFirestore(app);
+ } catch (e) {
+  console.warn("Firebase Firestore initialization failed:", e);
+ }
+
+ try {
+  storage = getStorage(app);
+ } catch (e) {
+  console.warn("Firebase Storage initialization failed:", e);
+ }
+}
+
+export { db, storage };
